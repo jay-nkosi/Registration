@@ -4,18 +4,15 @@
 
 package com.mycompany.registration;
 
-/**
- *
- * @author Student
- */
 import java.util.Scanner;
 import java.io.FileWriter;
 import java.io.IOException;
 
-
 public class Registration {
     
     private static int sentCount = 0;
+    // Instantiate Part 3 storage system tracking arrays
+    private static final DataManager dataManager = new DataManager();
 
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
@@ -53,7 +50,6 @@ public class Registration {
         String regResult = Login.registerUser(username, password, phone);
         System.out.println("\nFinal Status: " + regResult);
 
-        // Validates alignment to match your exact success message criteria
         if (regResult.equals("User is successfully registered")) {
             System.out.println("\n--- LOGIN ---");
             System.out.print("Username: ");
@@ -79,25 +75,33 @@ public class Registration {
             System.out.println("\n=== QUICKCHAT MENU ===");
             System.out.println("1) Send Messages");
             System.out.println("2) Show recently sent messages");
-            System.out.println("3) Logout");
+            System.out.println("3) Data Management & System Reports"); // Restored Part 3 hook
+            System.out.println("4) Logout"); 
             System.out.print("Choose option: ");
+            
+            while (!input.hasNextInt()) {
+                System.out.println("Please enter a numeric option choice.");
+                input.next();
+            }
             choice = input.nextInt();
-            input.nextLine(); // Clear scanner memory line buffer
+            input.nextLine(); 
 
             if (choice == 1) {
                 processMessages(input);
             } else if (choice == 2) {
                 System.out.println("Coming Soon...");
+            } else if (choice == 3) {
+                showDataManagementMenu(input); // Open Sub-menu
             }
-        } while (choice != 3);
+        } while (choice != 4); // Fixed to loop until option 4 logout
     }
     
     private static void processMessages(Scanner input) {
-        sentCount = 0; // Initialize loop session metric counter safely
+        sentCount = 0; 
         
         System.out.print("\nHow many messages do you want to send? ");
         int count = input.nextInt();
-        input.nextLine(); // Clear line buffer
+        input.nextLine(); 
         
         for (int i = 1; i <= count; i++) {
             System.out.println("\n--- Message " + i + " ---");
@@ -110,7 +114,14 @@ public class Registration {
             
             Message msg = new Message(i, phone, text);
             
-            // Runs verification directly through your specific Login class parameters
+            // Step A: Character Length Constraint Validation Filter
+            String lengthCheck = msg.checkMessageLength();
+            if (lengthCheck.contains("exceeds")) {
+                System.out.println(lengthCheck);
+                continue; // Cancel current index sequence and move to next message
+            }
+            
+            // Runs verification directly through your explicit Login parameters
             if (Login.checkCellPhoneNumber(phone)) {
                 System.out.println("Cell phone number successfully captured.");
                 System.out.println("\nSelect an action:");
@@ -120,19 +131,27 @@ public class Registration {
                 System.out.print("Choice: ");
                 
                 int action = input.nextInt();
-                input.nextLine(); // Clear line buffer
+                input.nextLine(); 
                 
                 if (action == 1) {
                     sentCount++;
+                    dataManager.addSentMessage(msg); // Push object reference directly into Tracking Arrays
                     System.out.println("Message Sent");
-                    System.out.println("ID: " + msg.generateMessageId());
+                    System.out.println("ID: " + msg.getMessageId());
                     System.out.println("Hash: " + msg.createMessageHash());
-                    System.out.println("Recipient: " + msg.checkRecipientCell());
-                    System.out.println("Message: " + msg.checkMessageId());
+                    System.out.println("Recipient: " + msg.getRecCell()); // Fixed: outputs value, not validation text
+                    System.out.println("Message: " + msg.getTxt());       // Fixed: outputs value, not validation text
                 } else if (action == 2) {
+                    dataManager.addDisregardedMessage(msg); // Push to tracking data arrays
                     System.out.println("Press 0 to delete the message.");
+                    int confirmDelete = input.nextInt();
+                    input.nextLine();
+                    if (confirmDelete == 0) {
+                        System.out.println("Message successfully cleared.");
+                    }
                 } else if (action == 3) {
                     sentCount++;
+                    dataManager.addStoredMessage(msg); // Push to tracking data arrays
                     saveJsonToFile(msg.storeMessage());
                 }
             } else {
@@ -140,6 +159,52 @@ public class Registration {
             }
         }
         System.out.println("\nTotal messages sent in this session: " + sentCount);
+    }
+    
+    private static void showDataManagementMenu(Scanner input) {
+        int subChoice;
+        do {
+            System.out.println("\n=== SYSTEM DATA REPORT MANAGEMENT ===");
+            System.out.println("1. View All Stored Recipients");
+            System.out.println("2. Display Longest Message Text");
+            System.out.println("3. Search Message Content by ID");
+            System.out.println("4. Search All Messages by Recipient");
+            System.out.println("5. Delete Message Using Footprint Hash");
+            System.out.println("6. Run Full System Diagnostic Report");
+            System.out.println("7. Return to QuickChat Menu");
+            System.out.print("Enter Selection: ");
+            
+            subChoice = input.nextInt(); 
+            input.nextLine();
+            
+            switch (subChoice) {
+                case 1:
+                    System.out.println(dataManager.getAllStoredRecipients());
+                    break;
+                case 2:
+                    System.out.println("Longest Logged Message Content: \n\"" + dataManager.findLongestStoredMessage() + "\"");
+                    break;
+                case 3:
+                    System.out.print("Enter Message ID to scan: ");
+                    System.out.println("Content Result: " + dataManager.searchByMessageId(input.nextLine()));
+                    break;
+                case 4:
+                    System.out.print("Enter Recipient Cell Number to query (+27...): ");
+                    System.out.println("Logged Content matches:\n" + dataManager.searchAllByRecipient(input.nextLine()));
+                    break;
+                case 5:
+                    System.out.print("Enter Message Hash to destroy: ");
+                    if (dataManager.deleteMessageByHash(input.nextLine())) {
+                        System.out.println("Entry matching footprint wiped from record storage data tables.");
+                    } else {
+                        System.out.println("Hash target key not found.");
+                    }
+                    break;
+                case 6:
+                    System.out.println(dataManager.generateSystemReport());
+                    break;
+            }
+        } while (subChoice != 7);
     }
     
     private static void saveJsonToFile(String jsonContent) {

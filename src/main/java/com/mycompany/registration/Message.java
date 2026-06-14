@@ -15,10 +15,9 @@ public class Message {
     
     private int messageNumber;
     private String messageId;
-    private String recCell; // Remapped property signature
-    private String txt;     // Remapped property signature
+    private String recCell; 
+    private String txt;     
     
-    // Constructor matching the updated naming mappings
     public Message(int messageNumber, String recCell, String txt) {
         this.messageNumber = messageNumber;
         this.recCell = recCell;
@@ -30,6 +29,20 @@ public class Message {
         Random rand = new Random(); 
         long id = (long) (rand.nextDouble() * 10000000000L);
         return String.format("%010d", id);
+    }
+    
+    // Character validation algorithm interface layer
+    public String checkMessageLength() {
+        if (this.txt == null) {
+            return "Message empty.";
+        }
+        int currentLength = this.txt.length();
+        if (currentLength <= 250) {
+            return "Message ready to send.";
+        } else {
+            int excess = currentLength - 250;
+            return "Message exceeds 250 characters by " + excess + "; please reduce the size.";
+        }
     }
     
     public boolean checkMessageId() {
@@ -65,7 +78,6 @@ public class Message {
                "}";
     }
     
-    // Remapped public getter methods
     public int getMessageNumber() { return messageNumber; }
     public String getMessageId() { return messageId; }
     public String getRecCell() { return recCell; }
